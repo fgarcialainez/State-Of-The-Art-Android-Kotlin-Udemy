@@ -64,7 +64,8 @@ class ListFragment : Fragment() {
             listError.visibility = View.GONE
             loadingView.visibility = View.VISIBLE
 
-            viewModel.refresh()
+            // Refresh all the data including the key
+            viewModel.hardRefresh()
 
             refreshLayout.isRefreshing = false
         }

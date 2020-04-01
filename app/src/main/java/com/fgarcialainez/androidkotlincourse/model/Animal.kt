@@ -117,3 +117,5 @@ data class Animal(
         }
     }
 }
+
+data class AnimalPalette(var color: Int)

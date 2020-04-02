@@ -3,7 +3,9 @@ package com.fgarcialainez.androidkotlincourse.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
+import com.fgarcialainez.androidkotlincourse.dagger.*
 import com.fgarcialainez.androidkotlincourse.model.Animal
+import com.fgarcialainez.androidkotlincourse.model.AnimalApi
 import com.fgarcialainez.androidkotlincourse.model.AnimalApiService
 import com.fgarcialainez.androidkotlincourse.model.ApiKey
 import com.fgarcialainez.androidkotlincourse.utils.SharedPreferencesHelper
@@ -11,18 +13,31 @@ import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.observers.DisposableSingleObserver
 import io.reactivex.schedulers.Schedulers
+import javax.inject.Inject
 
-class ListViewModel(application: Application): AndroidViewModel(application) {
+class ListViewModel(application: Application) : AndroidViewModel(application) {
 
     val animals by lazy { MutableLiveData<List<Animal>>() }
     val loadError by lazy { MutableLiveData<Boolean>() }
     val loading by lazy { MutableLiveData<Boolean>() }
 
-    private val api = AnimalApiService()
+    private var invalidApiKey = false
     private val disposable = CompositeDisposable()
 
-    private var invalidApiKey = false
-    private val preferences = SharedPreferencesHelper(getApplication())
+    @Inject
+    lateinit var apiService: AnimalApiService
+
+    @Inject
+    @field:TypeOfContext(CONTEXT_APP)
+    lateinit var preferences: SharedPreferencesHelper
+
+    init {
+        // Inject a new instance of the AnimalApiService
+        DaggerViewModelComponent.builder()
+            .appModule(AppModule(getApplication()))
+            .build()
+            .inject(this)
+    }
 
     fun refresh() {
         // Reset the flag
@@ -34,11 +49,10 @@ class ListViewModel(application: Application): AndroidViewModel(application) {
         // Get the stored key
         val key = preferences.getApiKey()
 
-        if(key.isNullOrEmpty()) {
+        if (key.isNullOrEmpty()) {
             // Get the key
             getApiKey()
-        }
-        else {
+        } else {
             // Get animals using the stored key
             getAnimals(key)
         }
@@ -55,16 +69,15 @@ class ListViewModel(application: Application): AndroidViewModel(application) {
 
     private fun getApiKey() {
         disposable.add(
-            api.getApiKey()
+            apiService.getApiKey()
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribeWith(object: DisposableSingleObserver<ApiKey>() {
+                .subscribeWith(object : DisposableSingleObserver<ApiKey>() {
                     override fun onSuccess(apiKey: ApiKey) {
                         if (apiKey.key.isNullOrEmpty()) {
                             loading.value = false
                             loadError.value = true
-                        }
-                        else {
+                        } else {
                             // Store retrieved key
                             preferences.saveApiKey(apiKey.key)
 
@@ -74,13 +87,12 @@ class ListViewModel(application: Application): AndroidViewModel(application) {
                     }
 
                     override fun onError(e: Throwable) {
-                        if(!invalidApiKey) {
+                        if (!invalidApiKey) {
                             invalidApiKey = true
 
                             // Get the key
                             getApiKey()
-                        }
-                        else {
+                        } else {
                             animals.value = null
                             loading.value = false
                             loadError.value = true
@@ -92,10 +104,10 @@ class ListViewModel(application: Application): AndroidViewModel(application) {
 
     private fun getAnimals(key: String) {
         disposable.add(
-            api.getAnimals(key)
+            apiService.getAnimals(key)
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribeWith(object: DisposableSingleObserver<List<Animal>>() {
+                .subscribeWith(object : DisposableSingleObserver<List<Animal>>() {
                     override fun onSuccess(list: List<Animal>) {
                         animals.value = list
                         loading.value = false

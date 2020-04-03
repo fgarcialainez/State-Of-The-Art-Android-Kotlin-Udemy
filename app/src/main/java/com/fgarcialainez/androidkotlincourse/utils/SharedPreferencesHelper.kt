@@ -3,16 +3,16 @@
 package com.fgarcialainez.androidkotlincourse.utils
 
 import android.content.Context
+import android.preference.PreferenceManager
 
 class SharedPreferencesHelper(context: Context) {
-    private val PREF_NAME = "PREF_NAME"
     private val PREF_API_KEY = "PREF_API_KEY"
 
-    private val preferences = context.applicationContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+    private val prefs = PreferenceManager.getDefaultSharedPreferences(context.applicationContext)
 
-    fun saveApiKey(key: String) {
-        preferences.edit().putString(PREF_API_KEY, key).apply()
+    fun saveApiKey(key: String?) {
+        prefs.edit().putString(PREF_API_KEY, key).apply()
     }
 
-    fun getApiKey() = preferences.getString(PREF_API_KEY, null)
+    fun getApiKey() = prefs.getString(PREF_API_KEY, null)
 }

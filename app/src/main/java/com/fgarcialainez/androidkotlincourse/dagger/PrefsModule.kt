@@ -8,8 +8,7 @@ import dagger.Provides
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
-// Enable inject the same dependency using either
-// an application context or an activity context
+// Enable inject the same dependency using either an application context or an activity context
 const val CONTEXT_APP = "Application Context"
 const val CONTEXT_ACTIVITY= "Activity Context"
 
@@ -17,12 +16,12 @@ const val CONTEXT_ACTIVITY= "Activity Context"
 annotation class TypeOfContext(val type: String)
 
 @Module
-class PrefsModule {
+open class PrefsModule {
 
     @Provides
     @Singleton
     @TypeOfContext(CONTEXT_APP)
-    fun provideSharedPreferences(app: Application): SharedPreferencesHelper {
+    open fun provideSharedPreferences(app: Application): SharedPreferencesHelper {
         return SharedPreferencesHelper(app)
     }
 

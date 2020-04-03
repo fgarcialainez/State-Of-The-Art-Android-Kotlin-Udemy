@@ -3,9 +3,11 @@ package com.fgarcialainez.androidkotlincourse.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
-import com.fgarcialainez.androidkotlincourse.dagger.*
+import com.fgarcialainez.androidkotlincourse.dagger.AppModule
+import com.fgarcialainez.androidkotlincourse.dagger.CONTEXT_APP
+import com.fgarcialainez.androidkotlincourse.dagger.DaggerViewModelComponent
+import com.fgarcialainez.androidkotlincourse.dagger.TypeOfContext
 import com.fgarcialainez.androidkotlincourse.model.Animal
-import com.fgarcialainez.androidkotlincourse.model.AnimalApi
 import com.fgarcialainez.androidkotlincourse.model.AnimalApiService
 import com.fgarcialainez.androidkotlincourse.model.ApiKey
 import com.fgarcialainez.androidkotlincourse.utils.SharedPreferencesHelper
@@ -17,10 +19,15 @@ import javax.inject.Inject
 
 class ListViewModel(application: Application) : AndroidViewModel(application) {
 
+    constructor(application: Application, test: Boolean = true): this(application) {
+        injected = test
+    }
+
     val animals by lazy { MutableLiveData<List<Animal>>() }
     val loadError by lazy { MutableLiveData<Boolean>() }
     val loading by lazy { MutableLiveData<Boolean>() }
 
+    private var injected = false
     private var invalidApiKey = false
     private val disposable = CompositeDisposable()
 
@@ -31,15 +38,21 @@ class ListViewModel(application: Application) : AndroidViewModel(application) {
     @field:TypeOfContext(CONTEXT_APP)
     lateinit var preferences: SharedPreferencesHelper
 
-    init {
-        // Inject a new instance of the AnimalApiService
-        DaggerViewModelComponent.builder()
-            .appModule(AppModule(getApplication()))
-            .build()
-            .inject(this)
+    fun inject() {
+        // Check if the AnimalApiServce has been already injected (e.g. unit tests)
+        if(!injected) {
+            // Inject a new instance of the AnimalApiService
+            DaggerViewModelComponent.builder()
+                .appModule(AppModule(getApplication()))
+                .build()
+                .inject(this)
+        }
     }
 
     fun refresh() {
+        // Call injection function
+        inject()
+
         // Reset the flag
         invalidApiKey = false
 
@@ -56,11 +69,13 @@ class ListViewModel(application: Application) : AndroidViewModel(application) {
             // Get animals using the stored key
             getAnimals(key)
         }
-
-        getApiKey()
     }
 
     fun hardRefresh() {
+        // Call injection function
+        inject()
+
+        // Show progress view
         loading.value = true
 
         // Get the key
@@ -72,7 +87,7 @@ class ListViewModel(application: Application) : AndroidViewModel(application) {
             apiService.getApiKey()
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribeWith(object : DisposableSingleObserver<ApiKey>() {
+                .subscribeWith(object: DisposableSingleObserver<ApiKey>() {
                     override fun onSuccess(apiKey: ApiKey) {
                         if (apiKey.key.isNullOrEmpty()) {
                             loading.value = false
